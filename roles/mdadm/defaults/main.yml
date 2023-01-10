@@ -1,0 +1,14 @@
+---
+
+mdadm_arrays:
+ 
+ - name: 'md0'
+   devices:
+     - '/dev/loop9'
+     - '/dev/loop10'
+   filesystem: 'ext4'
+   level: '1'
+   mountpoint: '/mnt/md0'
+   state: 'present'
+   opts: 'noatime'
+

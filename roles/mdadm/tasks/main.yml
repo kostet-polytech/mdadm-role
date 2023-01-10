@@ -1,0 +1,70 @@
+---
+    - name: ensure python3 is installed
+      apt:
+        name: python3
+        state: present
+
+    - name: install parted to create partition
+      apt:
+        name: parted
+        state: present
+
+    - name: Checking Status Of Array
+      shell: cat /proc/mdstat | grep /dev/md*
+      register: array_check
+      changed_when: false
+      failed_when: false
+      check_mode: no
+
+    - name: Capturing Array Details
+      command: mdadm --detail --scan
+      register: array_details
+      changed_when: false
+
+    - name: creating 2 empty binary files
+      shell: |
+       dd if=/dev/zero of=lb1.img bs=100M count=10
+       dd if=/dev/zero of=lb2.img bs=100M count=10
+
+    - name: Connect as block device
+      shell: |
+       losetup -fP lb1.img
+       losetup -fP lb2.img
+
+    - name: Creatind disk array
+      shell: yes | mdadm --create /dev/md0 --level=1 --raid-device=2 /dev/loop9 /dev/loop10
+
+    - name: Create a new GPT partition
+      community.general.parted:
+        device: /dev/md0
+        number: 1
+        state: present
+        label: gpt
+
+    - name: Create new ext4 primary partition
+      community.general.parted:
+        device: /dev/md0
+        number: 1
+        state: present
+        fs_type: ext4
+
+    - name: Stopping Array
+      shell: mdadm --stop /dev/md0
+      register: array_stopped
+      with_items: "{{ mdadm_arrays }}"
+       
+
+    - name: Cleaning array and removing loop device 
+      command: "mdadm --zero-superblock {{ item.1 }}"
+      with_subelements:
+        - '{{ mdadm_arrays }}'
+        - devices
+      when: >
+        array_stopped.changed
+     
+    - name: Deleting loops
+      command: | 
+       losetup -d /dev/loop9 /dev/loop10  
+ 
+
+

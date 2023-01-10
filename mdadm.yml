@@ -1,0 +1,7 @@
+- name: 'mdadm'
+  hosts: all
+  become: false
+  tasks:
+    - name: mdadm
+      include_role:
+        name: "mdadm"
